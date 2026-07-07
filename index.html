@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>西安市消费补贴备注生成器</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif;
+    background:#f5f5f5;
+    padding:20px;
+}
+
+.container{
+    width:100%;
+    max-width:500px;
+    margin:auto;
+    background:#fff;
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+h2{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+label{
+    display:block;
+    margin:15px 0 6px;
+    font-size:14px;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    font-size:16px;
+    border:1px solid #ccc;
+    border-radius:6px;
+}
+
+.result{
+    border:1px solid #ccc;
+    border-radius:8px;
+    padding:12px;
+    min-height:180px;
+    white-space:pre-wrap;
+    word-break:break-all;
+    line-height:1.8;
+    margin:20px 0;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    border:none;
+    background:#28a745;
+    color:#fff;
+    font-size:16px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#218838;
+}
+
+.success{
+    text-align:center;
+    color:green;
+    margin-top:10px;
+}
+
+@media (max-width:600px){
+
+    body{
+        padding:10px;
+    }
+
+    .container{
+        padding:15px;
+    }
+
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<h2>西安市消费补贴备注生成器</h2>
+
+<label>销售日期</label>
+<input type="date" id="date">
+
+<label>SN</label>
+<input id="sn" placeholder="请输入SN">
+
+<label>补贴确认人手机号</label>
+<input id="phone" placeholder="请输入手机号">
+
+<label>购买方地址</label>
+<input id="address" placeholder="请输入购买方地址">
+
+<div class="result" id="result"></div>
+
+<button onclick="copyText()">复制备注</button>
+
+<div class="success" id="success"></div>
+
+</div>
+
+<script>
+
+const date=document.getElementById("date");
+const sn=document.getElementById("sn");
+const phone=document.getElementById("phone");
+const address=document.getElementById("address");
+const result=document.getElementById("result");
+const success=document.getElementById("success");
+
+// 默认今天
+const today=new Date();
+date.value=today.toISOString().split("T")[0];
+
+function calc(){
+
+    result.innerText=
+`2026年西安市消费补贴 手机
+销售日期:${date.value}
+SN:${sn.value}
+政府补贴金额:400元
+补贴确认人手机号:${phone.value}
+购买方地址:${address.value}`;
+
+}
+
+date.onchange=calc;
+sn.oninput=calc;
+phone.oninput=calc;
+address.oninput=calc;
+
+calc();
+
+function copyText(){
+
+    navigator.clipboard.writeText(result.innerText);
+
+    success.innerText="已复制";
+
+    setTimeout(()=>{
+        success.innerText="";
+    },1500);
+
+}
+
+</script>
+
+</body>
+</html>
