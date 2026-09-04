@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>西安市消费补贴备注生成器</title>
+
 <link rel="icon" type="image/png" sizes="32x32"
       href="https://woaiyhh.github.io/shibu/Pingu.png">
 
 <link rel="apple-touch-icon" sizes="180x180"
       href="https://woaiyhh.github.io/shibu/Pingu.png">
+
 <style>
+
 *{
     margin:0;
     padding:0;
@@ -20,6 +26,7 @@ body{
     font-family:-apple-system,BlinkMacSystemFont,"Microsoft YaHei",sans-serif;
     background:#f5f5f5;
     padding:20px;
+    color:#222;
 }
 
 .container{
@@ -41,14 +48,22 @@ label{
     display:block;
     margin:15px 0 6px;
     font-size:14px;
+    color:#444;
 }
 
 input{
     width:100%;
-    padding:10px;
+    padding:11px;
     font-size:16px;
     border:1px solid #ccc;
     border-radius:6px;
+    outline:none;
+    transition:.2s;
+}
+
+input:focus{
+    border-color:#28a745;
+    box-shadow:0 0 0 2px rgba(40,167,69,.1);
 }
 
 .result{
@@ -60,6 +75,8 @@ input{
     word-break:break-all;
     line-height:1.8;
     margin:20px 0;
+    background:#fafafa;
+    font-size:15px;
 }
 
 button{
@@ -71,16 +88,32 @@ button{
     font-size:16px;
     border-radius:6px;
     cursor:pointer;
+    transition:.2s;
 }
 
 button:hover{
     background:#218838;
 }
 
+button:active{
+    transform:scale(.98);
+}
+
 .success{
     text-align:center;
-    color:green;
+    color:#28a745;
     margin-top:10px;
+    height:20px;
+}
+
+.tip{
+    margin-top:15px;
+    padding:10px;
+    background:#f8f9fa;
+    border-radius:6px;
+    color:#666;
+    font-size:12px;
+    line-height:1.6;
 }
 
 @media (max-width:600px){
@@ -94,80 +127,409 @@ button:hover{
     }
 
 }
+
 </style>
 
 </head>
+
 <body>
 
 <div class="container">
 
 <h2>西安市消费补贴备注生成器</h2>
 
+
+<!-- 销售日期 -->
+
 <label>销售日期</label>
-<input type="date" id="date">
+
+<input
+    type="date"
+    id="date"
+>
+
+
+<!-- 原售价 -->
+
+<label>原售价</label>
+
+<input
+    type="number"
+    id="price"
+    placeholder="请输入手机原售价"
+    min="0"
+    step="0.01"
+>
+
+
+<!-- 中台售价 -->
+
+<label>中台售价</label>
+
+<input
+    type="number"
+    id="middlePrice"
+    placeholder="自动计算，可手动修改"
+    min="0"
+    step="0.01"
+>
+
+
+<!-- SN -->
 
 <label>SN</label>
-<input id="sn" placeholder="请输入SN">
+
+<input
+    id="sn"
+    placeholder="请输入SN"
+>
+
+
+<!-- 手机号 -->
 
 <label>补贴确认人手机号</label>
-<input id="phone" placeholder="请输入手机号">
+
+<input
+    id="phone"
+    type="tel"
+    placeholder="请输入手机号"
+>
+
+
+<!-- 地址 -->
 
 <label>购买方地址</label>
-<input id="address" placeholder="请输入购买方地址">
+
+<input
+    id="address"
+    placeholder="请输入购买方地址"
+>
+
+
+<!-- 最终备注 -->
 
 <div class="result" id="result"></div>
 
-<button onclick="copyText()">复制备注</button>
+
+<!-- 复制 -->
+
+<button onclick="copyText()">
+    复制备注
+</button>
 
 <div class="success" id="success"></div>
 
+
+<div class="tip">
+    原售价输入后会自动计算中台售价。
+    如中台售价与实际业务数据不一致，可直接手动修改。
 </div>
+
+</div>
+
 
 <script>
 
-const date=document.getElementById("date");
-const sn=document.getElementById("sn");
-const phone=document.getElementById("phone");
-const address=document.getElementById("address");
-const result=document.getElementById("result");
-const success=document.getElementById("success");
 
+// ===============================
+// 获取元素
+// ===============================
+
+const date = document.getElementById("date");
+
+const price = document.getElementById("price");
+
+const middlePrice = document.getElementById("middlePrice");
+
+const sn = document.getElementById("sn");
+
+const phone = document.getElementById("phone");
+
+const address = document.getElementById("address");
+
+const result = document.getElementById("result");
+
+const success = document.getElementById("success");
+
+
+// ===============================
 // 默认今天
-const today=new Date();
-date.value=today.toISOString().split("T")[0];
+// 使用本地时间，避免 UTC 导致日期少一天
+// ===============================
+
+const today = new Date();
+
+const year = today.getFullYear();
+
+const month = String(today.getMonth() + 1).padStart(2,"0");
+
+const day = String(today.getDate()).padStart(2,"0");
+
+date.value = `${year}-${month}-${day}`;
+
+
+// ===============================
+// 金额格式化
+// ===============================
+
+function formatMoney(number){
+
+    if(!isFinite(number)){
+        return "0";
+    }
+
+    number = Math.round(
+        (number + Number.EPSILON) * 100
+    ) / 100;
+
+    if(Number.isInteger(number)){
+        return number.toString();
+    }
+
+    return number
+        .toFixed(2)
+        .replace(/0+$/,"")
+        .replace(/\.$/,"");
+
+}
+
+
+// ===============================
+// 计算中台售价
+//
+// 政府补贴 = 原售价 × 10%
+// 政府补贴最高 1000 元
+//
+// 商家承担 = 政府补贴 × 20%
+//
+// 中台售价 = 原售价 - 商家承担
+// ===============================
+
+function calculateMiddlePrice(){
+
+    const originalPrice = parseFloat(price.value);
+
+    if(
+        isNaN(originalPrice) ||
+        originalPrice <= 0
+    ){
+        middlePrice.value = "";
+        calc();
+        return;
+    }
+
+
+    // 政府补贴金额
+    const governmentSubsidy = Math.min(
+        originalPrice * 0.10,
+        1000
+    );
+
+
+    // 商家承担20%
+    const merchantShare =
+        governmentSubsidy * 0.20;
+
+
+    // 中台售价
+    const calculatedMiddlePrice =
+        originalPrice - merchantShare;
+
+
+    middlePrice.value =
+        formatMoney(calculatedMiddlePrice);
+
+
+    calc();
+
+}
+
+
+// ===============================
+// 生成最终备注
+// ===============================
 
 function calc(){
 
-    result.innerText=
-`2026年西安市消费补贴 手机
-销售日期:${date.value}
+    const originalPrice =
+        parseFloat(price.value) || 0;
+
+    const actualMiddlePrice =
+        parseFloat(middlePrice.value) || 0;
+
+
+    /*
+        顾客实际享受的政府补贴：
+
+        原售价 - 中台售价
+        = 商家承担部分
+
+        商家承担部分 ÷ 20%
+        = 政府补贴总额
+
+        政府补贴总额 × 80%
+        = 顾客实际补贴
+
+        因此：
+
+        (原售价 - 中台售价) × 4
+
+    */
+
+    let actualSubsidy = 0;
+
+
+    if(
+        originalPrice > 0 &&
+        actualMiddlePrice > 0 &&
+        originalPrice >= actualMiddlePrice
+    ){
+
+        const merchantShare =
+            originalPrice - actualMiddlePrice;
+
+        const totalGovernmentSubsidy =
+            merchantShare / 0.20;
+
+        actualSubsidy =
+            totalGovernmentSubsidy * 0.80;
+
+    }
+
+
+    // ===============================
+    // 最终备注模板
+    // ===============================
+
+    result.innerText =
+`2026年西安市消费补贴 手机 销售日期:${date.value}
 SN:${sn.value}
-政府补贴金额:400元
+政府补贴金额:${formatMoney(actualSubsidy)}元
 补贴确认人手机号:${phone.value}
 购买方地址:${address.value}`;
 
 }
 
-date.onchange=calc;
-sn.oninput=calc;
-phone.oninput=calc;
-address.oninput=calc;
+
+// ===============================
+// 原售价输入
+// 自动计算中台售价
+// ===============================
+
+price.addEventListener(
+    "input",
+    calculateMiddlePrice
+);
+
+
+// ===============================
+// 中台售价允许手动修改
+// ===============================
+
+middlePrice.addEventListener(
+    "input",
+    calc
+);
+
+
+// ===============================
+// 其他输入实时更新
+// ===============================
+
+date.addEventListener(
+    "change",
+    calc
+);
+
+sn.addEventListener(
+    "input",
+    calc
+);
+
+phone.addEventListener(
+    "input",
+    calc
+);
+
+address.addEventListener(
+    "input",
+    calc
+);
+
+
+// ===============================
+// 初始化
+// ===============================
 
 calc();
 
-function copyText(){
 
-    navigator.clipboard.writeText(result.innerText);
+// ===============================
+// 复制备注
+// ===============================
 
-    success.innerText="已复制";
+async function copyText(){
 
-    setTimeout(()=>{
-        success.innerText="";
-    },1500);
+    try{
+
+        await navigator.clipboard.writeText(
+            result.innerText
+        );
+
+        success.innerText = "已复制";
+
+        setTimeout(()=>{
+            success.innerText = "";
+        },1500);
+
+    }
+
+    catch(error){
+
+        // 兼容部分浏览器
+
+        const textarea =
+            document.createElement("textarea");
+
+        textarea.value =
+            result.innerText;
+
+        textarea.style.position = "fixed";
+
+        textarea.style.opacity = "0";
+
+        document.body.appendChild(textarea);
+
+        textarea.select();
+
+        try{
+
+            document.execCommand("copy");
+
+            success.innerText = "已复制";
+
+        }
+
+        catch(e){
+
+            success.innerText =
+                "复制失败，请手动复制";
+
+        }
+
+        document.body.removeChild(textarea);
+
+
+        setTimeout(()=>{
+            success.innerText = "";
+        },1500);
+
+    }
 
 }
 
 </script>
 
 </body>
+
 </html>
